@@ -33,7 +33,7 @@ class sendToVK{
 				$id = self::createWall($save[0])["response"]["post_id"];
 				echo date("[H:i:s]", time()) . " Запись с id " . $id . " успешно опубликована в сообществе group_id которой = " . config::GROUP_ID . "!" . PHP_EOL;
 			} else {
-				echo date("[H:i:s]", time()) . " Произошла ошибка при работе метода pphotos.saveWallPhoto!" . PHP_EOL;
+				echo date("[H:i:s]", time()) . " Произошла ошибка при работе метода photos.saveWallPhoto!" . PHP_EOL;
 				var_dump($save);
 			}
 		} else {

@@ -55,7 +55,7 @@ class SkyLiker{
 			if(isset($dataWall['error']['error_code'])){
 				$i = 1;
 				while(true) {
-					echo date("[H:i:s]", time()) . " Уснул на полсек getWall" . PHP_EOL;
+					//echo date("[H:i:s]", time()) . " Уснул на полсек getWall" . PHP_EOL;
 					usleep(500000 * ($i * $i));
 
 					$dataWall = self::getWall($offset);
@@ -95,8 +95,11 @@ class SkyLiker{
 
 					if($diff !== $checkDay) {
 						$checkDay = $diff;
+						$perc = 100 - (int) round($checkDay * 100 / $maxCountDay);
 
-						echo date("[H:i:s]", time()) . " Загружено на " .  (100 - (int) round($checkDay * 100 / $maxCountDay)) . "%!" . PHP_EOL;
+						if($perc >= 0) {
+							echo date("[H:i:s]", time()) . " Загружено на " . (100 - (int)round($checkDay * 100 / $maxCountDay)) . "%!" . PHP_EOL;
+						}
 					}
 				}
 
@@ -146,7 +149,7 @@ class SkyLiker{
 			$data = VKFunctions::getLikeList("-" . self::$group_id, $post, 1000, 0, config::getUserToken());
 
 			if(isset($data['error']['error_code'])){
-				echo date("[H:i:s]", time()) . " Уснул на полсек getLikeList" . PHP_EOL;
+				//echo date("[H:i:s]", time()) . " Уснул на полсек getLikeList" . PHP_EOL;
 				usleep(500000 * ($i * $i));
 
 				if($i++ > 4) {

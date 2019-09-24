@@ -98,7 +98,7 @@ class SkyLiker{
 						$perc = 100 - (int) round($checkDay * 100 / $maxCountDay);
 
 						if($perc >= 0) {
-							echo date("[H:i:s]", time()) . " Загружено на " . (100 - (int)round($checkDay * 100 / $maxCountDay)) . "%!" . PHP_EOL;
+							echo date("[H:i:s]", time()) . " Загружено на " . $perc . "%!" . PHP_EOL;
 						}
 					}
 				}

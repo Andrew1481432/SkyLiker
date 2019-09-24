@@ -86,7 +86,7 @@ class SkyLiker{
 					break 2;
 				}
 
-				if(($diff = $post["date"] - $endUnix) > 0) {
+				if(($diff = $post["date"] - $endUnix) > 0 && empty($post["is_pinned"])) {
 					$diff = round($diff / 60 / 60 / 24);
 
 					if($maxCountDay === 0) { // срабатывает один раз ищет макс день

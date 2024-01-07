@@ -1,3 +1,3 @@
 #!/bin/bash
 
-php7 Loader.php
+php Loader.php

@@ -19,24 +19,24 @@ class sendToVK {
      * @throws JsonException
      */
     public static function run(): void{
-		$i = 0; // счетчик срабатывания error code 6
-		$maxI = 10;
-		$photo = new CURLFile(realpath(__DIR__ . "/" . WorkPhoto::DIR_SAVE . WorkPhoto::NAME_PHOTO_LYCOMER));
+        $i = 0; // счетчик срабатывания error code 6
+        $maxI = 10;
+        $photo = new CURLFile(realpath(__DIR__ . "/" . WorkPhoto::DIR_SAVE . WorkPhoto::NAME_PHOTO_LYCOMER));
 
-		upload:
-		$upload = self::uploadFileServer();
-		if(isset($upload['response'])) {
-			$upload = $upload['response'];
+        upload:
+        $upload = self::uploadFileServer();
+        if(isset($upload['response'])) {
+            $upload = $upload['response'];
 
-			$load = self::loadFileServer($upload["upload_url"], [
+            $load = self::loadFileServer($upload["upload_url"], [
                 'photo' => $photo
             ]);
 
-			usleep(500000);
-			save:
-			$save = self::saveFileServer($load);
-			if(isset($save["response"])) {
-				$save = $save["response"];
+            usleep(500000);
+            save:
+            $save = self::saveFileServer($load);
+            if(isset($save["response"])) {
+                $save = $save["response"];
 
                 $responseWallPost = self::createWall($save[0]);
                 if(isset($responseWallPost["response"])) {
@@ -48,25 +48,25 @@ class sendToVK {
                     echo "Произошла ошибка в момент публикации поста!" . PHP_EOL;
                     var_dump($responseWallPost);
                 }
-			} else {
-				if(isset($save["error"]) && $save["error"]["error_code"] == 6 && ++$i <= $maxI) {
-					usleep(500000);
-					goto save;
-				} else {
-					echo date("[H:i:s]", time()) . " Произошла ошибка при работе метода photos.saveWallPhoto!" . PHP_EOL;
-					var_dump($save);
-				}
-			}
-		} else {
-			if(isset($upload["error"]) && $upload["error"]["error_code"] == 6 && ++$i <= $maxI) {
-				usleep(500000);
-				goto upload;
-			} else {
-				echo date("[H:i:s]", time()) . " Произошла ошибка при работе метода photos.getWallUploadServer!" . PHP_EOL;
-				var_dump($upload);
-			}
-		}
-	}
+            } else {
+                if(isset($save["error"]) && $save["error"]["error_code"] == 6 && ++$i <= $maxI) {
+                    usleep(500000);
+                    goto save;
+                } else {
+                    echo date("[H:i:s]", time()) . " Произошла ошибка при работе метода photos.saveWallPhoto!" . PHP_EOL;
+                    var_dump($save);
+                }
+            }
+        } else {
+            if(isset($upload["error"]) && $upload["error"]["error_code"] == 6 && ++$i <= $maxI) {
+                usleep(500000);
+                goto upload;
+            } else {
+                echo date("[H:i:s]", time()) . " Произошла ошибка при работе метода photos.getWallUploadServer!" . PHP_EOL;
+                var_dump($upload);
+            }
+        }
+    }
 
     /**
      * Получение адреса сервера, куда заливать картинку
@@ -74,31 +74,31 @@ class sendToVK {
      * @return array
      * @throws JsonException
      */
-	private static function uploadFileServer(): array{
+    private static function uploadFileServer(): array{
         $publishGroupId = Loader::getConfig()->getPublishGroupId();
         $userToken = Loader::getConfig()->getUserToken();
 
-		return VKFunctions::executeMethod("photos.getWallUploadServer", $userToken,
+        return VKFunctions::executeMethod("photos.getWallUploadServer", $userToken,
             [
                 "group_id" => $publishGroupId
             ]
         );
-	}
+    }
 
-	/**
-	 * Заливает файл на сервер
-	 *
-	 * @param string $url
-	 * @param array $params
-	 *
-	 * @return array
-	 */
-	private static function loadFileServer(string $url, array $params): array{
+    /**
+     * Заливает файл на сервер
+     *
+     * @param string $url
+     * @param array $params
+     *
+     * @return array
+     */
+    private static function loadFileServer(string $url, array $params): array{
         $raw = Internet::requestURL($url, InternetStatics::CUSTOM_REQUEST_POST,
             InternetStatics::CONTENT_TYPE_MULTIPART_FORM_DATA, [], $params);
 
-		return json_decode($raw, true);
-	}
+        return json_decode($raw, true);
+    }
 
     /**
      * Загрузка фотографий на стену
@@ -108,16 +108,16 @@ class sendToVK {
      * @return array
      * @throws JsonException
      */
-	private static function saveFileServer(array $params): array{
+    private static function saveFileServer(array $params): array{
         $publishGroupId = Loader::getConfig()->getPublishGroupId();
         $userToken = Loader::getConfig()->getUserToken();
 
         $params = array_merge($params, [
-			"group_id" => $publishGroupId
-		]);
+            "group_id" => $publishGroupId
+        ]);
 
-		return VKFunctions::executeMethod("photos.saveWallPhoto", $userToken, $params);
-	}
+        return VKFunctions::executeMethod("photos.saveWallPhoto", $userToken, $params);
+    }
 
     /**
      * @param array $params
@@ -129,7 +129,7 @@ class sendToVK {
         $publishGroupId = Loader::getConfig()->getPublishGroupId();
         $userToken = Loader::getConfig()->getUserToken();
 
-		return VKFunctions::executeMethod("wall.post", $userToken,
+        return VKFunctions::executeMethod("wall.post", $userToken,
             [
                 'message' => self::returnTextWall(),
                 'attachments' => rawurlencode("photo".$params["owner_id"]."_".$params["id"]),
@@ -137,14 +137,14 @@ class sendToVK {
                 'from_group' => 1,
                 'publish_date' => time()+self::PUBLISH_DELAYED_WALL
             ]);
-	}
+    }
 
-	/**
-	 * Возвращает текст для поста
-	 *
-	 * @return string
-	 */
-	private static function returnTextWall(): string{
+    /**
+     * Возвращает текст для поста
+     *
+     * @return string
+     */
+    private static function returnTextWall(): string{
         return "» ЛАЙКОМЕР - ИТОГИ МЕСЯЦА.
 
 #likemer
@@ -154,33 +154,33 @@ class sendToVK {
 🥇 @id".($id = self::getElementByIndex(0)[0])." (".self::getNameByName($id).");
 🥈 @id".($id = self::getElementByIndex(1)[0])." (".self::getNameByName($id).");
 🥉 @id".($id = self::getElementByIndex(2)[0])." (".self::getNameByName($id).").";
-	}
+    }
 
-	/**
-	 * @param int $index
-	 *
-	 * @return null|array [key, value]
-	 */
-	private static function getElementByIndex(int $index): ?array{
-		$i = 0;
-		foreach(WorkPhoto::$userLikes as $id => $likes) {
-			if($index === $i) {
-				return [$id, $likes];
-			}
-			$i++;
-		}
-		return null;
-	}
+    /**
+     * @param int $index
+     *
+     * @return null|array [key, value]
+     */
+    private static function getElementByIndex(int $index): ?array{
+        $i = 0;
+        foreach(WorkPhoto::$userLikes as $id => $likes) {
+            if($index === $i) {
+                return [$id, $likes];
+            }
+            $i++;
+        }
+        return null;
+    }
 
-	/**
-	 * Возвращает имя по id, если есть в массиве
-	 *
-	 * @param int $id
-	 *
-	 * @return string|null
-	 */
-	private static function getNameByName(int $id): ?string{
-		return WorkPhoto::$userInfo[$id]["name"] ?? null;
-	}
+    /**
+     * Возвращает имя по id, если есть в массиве
+     *
+     * @param int $id
+     *
+     * @return string|null
+     */
+    private static function getNameByName(int $id): ?string{
+        return WorkPhoto::$userInfo[$id]["name"] ?? null;
+    }
 
 }

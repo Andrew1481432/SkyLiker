@@ -1,26 +1,17 @@
 <?php
 
-namespace skyliker;
+include_once 'vendor/include_all.php';
 
-/**
- * Лайкомер - приложение которое поможет анализировать активность в сообществе
- * Выводит топ пользователей, которые больше всего пролайкали записи сообщества
- */
-
-include_once '../vendor/include_all.php';
-
-use lib\VKFunctions;
-use vendor\config;
-
-use skyliker\WorkPhoto;
+use utils\Config;
+use utils\VKFunctions;
 
 date_default_timezone_set('Europe/Moscow');
 
-
-class SkyLiker{
-
-	/** @var int */
-	private static $group_id;
+/**
+ * Лайкомер - сервис который поможет анализировать активность в сообществе
+ * Выводит топ пользователей, которые больше всего пролайкали записи пользователей или группы в сообществе
+ */
+class Loader {
 
 	/**
 	 * key - userId | value - countLikes
@@ -34,13 +25,27 @@ class SkyLiker{
 	 */
 	private static $userLikes = [];
 
-	/**
-	 * Функция запуска программы
-	 */
+    /** @var Config */
+    private static $config;
+
+    /**
+     * Функция запуска программы
+     *
+     * @throws JsonException
+     */
 	public static function run(): void{
+        if(!extension_loaded("gd")){
+            echo "[CRITICAL] Unable to find the GD extension." . PHP_EOL;
+            exit(1);
+        }
+        if (!function_exists('imagettftext')) {
+            echo "[CRITICAL] FreeType not found." . PHP_EOL;
+            exit(1);
+        }
+
 		echo date("[H:i:s]", time()) . " SkyLiker - RUN!!!" . PHP_EOL . PHP_EOL;
 
-		self::$group_id = config::getConfig()["group_id"];
+        self::$config = new Config("resources/config.json");
 
 		$endUnix = self::getUnixLastMonth();
 
@@ -48,7 +53,6 @@ class SkyLiker{
 		$maxCountDay = 0;
 
 		$offset = 0;
-
 		while(true) {
 			$dataWall = self::getWall($offset);
 
@@ -56,7 +60,7 @@ class SkyLiker{
 				$i = 1;
 				while(true) {
 					//echo date("[H:i:s]", time()) . " Уснул на полсек getWall" . PHP_EOL;
-					usleep(500000 * ($i * $i));
+					usleep(500000 * ($i * 2));
 
 					$dataWall = self::getWall($offset);
 					if(isset($dataWall["response"])) {
@@ -68,25 +72,20 @@ class SkyLiker{
 					}
 				}
 			}
-
 			$idPosts = [];
 
 			$dataWall = $dataWall["response"]["items"];
-
 			foreach($dataWall as $post) {
-				if($post["date"] < $endUnix && empty($post["is_pinned"])) {
+				if($post["date"] < $endUnix && !isset($post["is_pinned"])) {
 					arsort(self::$userLikes);
 
 					WorkPhoto::$userLikes = self::$userLikes;
 					WorkPhoto::run();
-
 					WorkPhoto::removeLycomerPhoto();
-
-
 					break 2;
 				}
 
-				if(($diff = $post["date"] - $endUnix) > 0 && empty($post["is_pinned"])) {
+				if(($diff = $post["date"] - $endUnix) > 0 && !isset($post["is_pinned"])) {
 					$diff = round($diff / 60 / 60 / 24);
 
 					if($maxCountDay === 0) { // срабатывает один раз ищет макс день
@@ -128,29 +127,34 @@ class SkyLiker{
 		}
 	}
 
-	/**
-	 * @param $uid
-	 *
-	 * @return array
-	 */
-
-	/**
-	 * Возвращает массив лайков
-	 *
-	 * @param array $posts
-	 *
-	 * @return \Generator
-	 */
-	private static function getLikes(array $posts) {
+    /**
+     * Возвращает лайки используя массив постов
+     *
+     * @param array $posts
+     *
+     * @return \Generator
+     * @throws JsonException
+     */
+	private static function getLikes(array $posts): \Generator{
 		foreach($posts as $post) {
 			$i = 1;
 
 			repeat:
-			$data = VKFunctions::getLikeList("-" . self::$group_id, $post, 1000, 0, config::getUserToken());
+            $data = VKFunctions::executeMethod(
+                "likes.getList",
+                self::$config->getUserToken(),
+                [
+                    'type' => 'post',
+                    'owner_id' => "-" . self::$config->getParseGroupId(),
+                    'item_id' => $post,
+                    'count' => 1000,
+                    'offset' => 0
+                ]
+            );
 
 			if(isset($data['error']['error_code'])){
 				//echo date("[H:i:s]", time()) . " Уснул на полсек getLikeList" . PHP_EOL;
-				usleep(500000 * ($i * $i));
+				usleep(500000 * ($i * 2));
 
 				if($i++ > 4) {
 					echo date("[H:i:s]", time()) . " Уже больше 4-х раз ловил капчу в getLikeList!" . PHP_EOL;
@@ -163,13 +167,22 @@ class SkyLiker{
 		}
 	}
 
-	/**
-	 * @param int $offset
-	 *
-	 * @return array|bool
-	 */
+    /**
+     * @param int $offset
+     *
+     * @return array|null
+     * @throws JsonException
+     */
 	private static function getWall(int $offset = 0): ?array{
-		return VKFunctions::getPosts("-".self::$group_id, 100, $offset, config::getUserToken());
+		return VKFunctions::executeMethod(
+            "wall.get",
+            self::$config->getUserToken(),
+            [
+                'owner_id' => "-".self::$config->getParseGroupId(),
+                'count' => 100,
+                'offset' => $offset
+            ]
+        );
 	}
 
 	/**
@@ -178,10 +191,10 @@ class SkyLiker{
 	 * @return int
 	 */
 	private static function getUnixLastMonth(): int{
-		$year = date("o");
+		$year = date("Y");
 		$month = date("n");
 
-		if($month == 1) { //  если месяц январь
+		if($month == 1) { // если месяц январь
 			$year--;
 			$month = 12;
 		} else {
@@ -191,9 +204,13 @@ class SkyLiker{
 		return mktime(date("H"), date("i"), date("s"), $month, date("j"), $year);
 	}
 
+	/**
+	 * @return Config
+	 */
+	public static function getConfig(): Config{
+		return self::$config;
+	}
+
 }
 
-SkyLiker::run();
-
-
-
+Loader::run();
